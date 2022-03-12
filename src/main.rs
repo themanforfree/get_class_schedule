@@ -1,12 +1,15 @@
-use clap::{Arg, Command};
+use chrono::{Duration, Local, TimeZone};
+use config::Config;
 use csv;
 use error_chain::error_chain;
 use jwglxt::STU;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::fs::File;
+
+mod config;
 mod jwglxt;
-use chrono::{Duration, Local, TimeZone};
+
 error_chain!(
     foreign_links {
         SerdeJsonError(serde_json::Error);
@@ -152,47 +155,21 @@ fn get_csv(schedules: &str) -> Result<()> {
 
 #[tokio::main]
 async fn main() {
-    let matches = Command::new("jwglxt")
-        .version("0.1")
-        .author("themanforfree <themanforfree@gmail.com>")
-        .about("get haut class schedule")
-        .arg(
-            Arg::new("username")
-                .short('u')
-                .long("username")
-                .value_name("USERNAME")
-                .help("username of the system")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::new("password")
-                .short('p')
-                .long("password")
-                .value_name("PASSWORD")
-                .help("password of the system")
-                .takes_value(true),
-        )
-        .get_matches();
-    let username = match matches.value_of("username") {
-        Some(v) => v,
-        None => {
-            println!("please input username");
-            std::process::exit(1);
-        }
-    };
-    let password = match matches.value_of("password") {
-        Some(v) => v,
-        None => {
-            println!("please input password");
-            std::process::exit(1);
-        }
-    };
-    let stu = STU::new(username, password);
+    let config = Config::parse();
+    let stu = STU::new(config);
     if let Err(e) = stu.login().await {
         println!("Login Error: {}", e);
         return;
     }
-    let schedules = stu.get_schedules(2021, 2).await.unwrap();
+
+    let schedules = match stu.get_schedules(2021, 2).await {
+        Ok(v) => v,
+        Err(e) => {
+            println!("Get Schedule Error: {}", e);
+            return;
+        }
+    };
+
     if let Err(e) = get_csv(&schedules) {
         println!("CSV Error: {}", e);
         return;

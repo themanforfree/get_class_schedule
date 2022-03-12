@@ -3,6 +3,8 @@ use rand::rngs::OsRng;
 use reqwest::Client;
 use rsa::{BigUint, PaddingScheme, PublicKey, RsaPublicKey};
 use serde_json::Value;
+
+use crate::config::Config;
 error_chain! {
     foreign_links {
         ReqwestError(reqwest::Error);
@@ -18,10 +20,10 @@ pub struct STU {
 }
 
 impl STU {
-    pub fn new(username: &str, password: &str) -> STU {
+    pub fn new(config: Config) -> STU {
         STU {
-            username: username.to_string(),
-            password: password.to_string(),
+            username: config.username,
+            password: config.password,
             client: Client::builder()
                 .cookie_store(true)
                 .build()
