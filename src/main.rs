@@ -28,6 +28,28 @@ struct Class {
     xqj: String,
 }
 
+#[derive(Deserialize, Serialize, Debug)]
+struct Record {
+    #[serde(rename = "Subject")]
+    subject: String,
+    #[serde(rename = "Start Date")]
+    start_date: String,
+    #[serde(rename = "End Date")]
+    end_date: String,
+    #[serde(rename = "Start Time")]
+    start_time: String,
+    #[serde(rename = "End Time")]
+    end_time: String,
+    #[serde(rename = "All Day Event")]
+    all_day: bool,
+    #[serde(rename = "Description")]
+    description: String,
+    #[serde(rename = "Location")]
+    location: String,
+    #[serde(rename = "Private")]
+    private: bool,
+}
+
 impl Class {
     fn empty() -> Class {
         Class {
@@ -40,7 +62,7 @@ impl Class {
         }
     }
 
-    fn to_records(&self) -> Vec<Vec<String>> {
+    fn to_records(&self) -> Vec<Record> {
         const CLASS_LIST: [[&str; 2]; 8] = [
             ["8:30", "9:15"],
             ["9:25", "10:05"],
@@ -77,17 +99,17 @@ impl Class {
 
             let start_time = CLASS_LIST[time[0] as usize - 1][0];
             let end_time = CLASS_LIST[time[1] as usize - 1][1];
-            let record = vec![
-                self.kcmc.clone(),
-                date.clone(),
-                date,
-                start_time.to_string(),
-                end_time.to_string(),
-                "False".to_string(),
-                self.xm.clone(),
-                place.clone(),
-                "False".to_string(),
-            ];
+            let record = Record {
+                subject: self.kcmc.clone(),
+                start_date: date.clone(),
+                end_date: date.clone(),
+                start_time: start_time.to_string(),
+                end_time: end_time.to_string(),
+                all_day: false,
+                description: self.xm.clone(),
+                location: place.clone(),
+                private: false,
+            };
             records.push(record);
         }
         records
@@ -97,19 +119,8 @@ impl Class {
 fn get_csv(schedules: &str) -> Result<()> {
     let file = File::create("schedules.csv")?;
     let mut writer = csv::Writer::from_writer(file);
-    writer.write_record(&[
-        "Subject",
-        "Start Date",
-        "End Date",
-        "Start Time",
-        "End Time",
-        "All Day Event",
-        "Description",
-        "Location",
-        "Private",
-    ])?;
     let schedules: Value = serde_json::from_str(schedules)?;
-    for v in schedules["kbList"]
+    for record in schedules["kbList"]
         .as_array()
         .unwrap()
         .iter()
@@ -122,32 +133,32 @@ fn get_csv(schedules: &str) -> Result<()> {
         .map(|v| v.to_records())
         .flatten()
     {
-        writer.write_record(&v)?;
+        writer.serialize(record)?;
     }
     const CHINESE_NUM: [&str; 11] = [
         "零", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十",
     ];
     let start = Local.ymd(2022, 2, 21);
     for i in 1..19 {
-        writer.write_record(&[
-            format!("第{}周", {
+        writer.serialize(Record {
+            subject: format!("第{}周", {
                 if i <= 10 {
                     format!("{}", CHINESE_NUM[i as usize])
                 } else {
                     format!("{}{}", CHINESE_NUM[10], CHINESE_NUM[i as usize - 10])
                 }
             }),
-            (start + Duration::weeks(i - 1))
+            start_date: (start + Duration::weeks(i - 1))
                 .format("%m/%d/%Y")
                 .to_string(),
-            (start + Duration::weeks(i)).format("%m/%d/%Y").to_string(),
-            String::new(),
-            String::new(),
-            String::from("True"),
-            String::new(),
-            String::new(),
-            String::from("False"),
-        ])?;
+            end_date: (start + Duration::weeks(i)).format("%m/%d/%Y").to_string(),
+            start_time: String::new(),
+            end_time: String::new(),
+            all_day: true,
+            description: String::new(),
+            location: String::new(),
+            private: false,
+        })?;
     }
     writer.flush()?;
     Ok(())
