@@ -1,0 +1,20 @@
+[package]
+name = "get_class_schedule"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+reqwest = { version = "0.11.9", features = ["cookies", "json"] }
+regex = "1.5.4"
+error-chain = "0.12.4"
+serde_json = "1.0.79"
+base64 = "0.13.0"
+rand = "0.8.5"
+rsa = "0.5.0"
+tokio = { version = "1.17.0", features = ["full"] }
+csv = "1.1.6"
+serde = "1.0.136"
+chrono = "0.4.19"
+clap = "3.1.6"
