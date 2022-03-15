@@ -1,8 +1,7 @@
 use chrono::{Duration, Local, TimeZone};
 use config::Config;
-use csv;
 use error_chain::error_chain;
-use jwglxt::STU;
+use jwglxt::Stu;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::fs::File;
@@ -82,13 +81,13 @@ impl Class {
 
         let time = self
             .jcs
-            .split("-")
+            .split('-')
             .map(|v| v.parse::<u32>().unwrap())
             .collect::<Vec<_>>();
         let weeks = self
             .zcd
             .replace("周", "")
-            .split("-")
+            .split('-')
             .map(|v| v.parse::<i64>().unwrap())
             .collect::<Vec<_>>();
         let day = self.xqj.parse::<i64>().unwrap();
@@ -143,7 +142,7 @@ fn get_csv(schedules: &str) -> Result<()> {
         writer.serialize(Record {
             subject: format!("第{}周", {
                 if i <= 10 {
-                    format!("{}", CHINESE_NUM[i as usize])
+                    CHINESE_NUM[i as usize].to_string()
                 } else {
                     format!("{}{}", CHINESE_NUM[10], CHINESE_NUM[i as usize - 10])
                 }
@@ -167,7 +166,7 @@ fn get_csv(schedules: &str) -> Result<()> {
 #[tokio::main]
 async fn main() {
     let config = Config::parse();
-    let stu = STU::new(config);
+    let stu = Stu::new(config);
     if let Err(e) = stu.login().await {
         println!("Login Error: {}", e);
         return;

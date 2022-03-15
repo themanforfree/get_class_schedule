@@ -13,15 +13,15 @@ error_chain! {
         SerdeJsonError(serde_json::Error);
     }
 }
-pub struct STU {
+pub struct Stu {
     username: String,
     password: String,
     client: Client,
 }
 
-impl STU {
-    pub fn new(config: Config) -> STU {
-        STU {
+impl Stu {
+    pub fn new(config: Config) -> Stu {
+        Stu {
             username: config.username,
             password: config.password,
             client: Client::builder()
@@ -54,7 +54,7 @@ impl STU {
             .split(r#"name="csrftoken" value=""#)
             .nth(1)
             .ok_or("csrftoken not found")?
-            .split(r#"""#)
+            .split('"')
             .next()
             .ok_or("csrftoken not found")?;
         Ok(String::from(csrftoken))
@@ -79,8 +79,8 @@ impl STU {
             .form(&[
                 ("csrftoken", &csrftoken),
                 ("yhm", &self.username),
-                ("mm", &STU::rsa_encode(&self.password, &n, &e)?),
-                ("mm", &STU::rsa_encode(&self.password, &n, &e)?),
+                ("mm", &Stu::rsa_encode(&self.password, n, e)?),
+                ("mm", &Stu::rsa_encode(&self.password, n, e)?),
             ])
             .send()
             .await?
@@ -97,7 +97,7 @@ impl STU {
         let xqm = match term {
             1 => "3",
             2 => "12",
-            _ => Err("term must be 1 or 2")?,
+            _ => return Err("term must be 1 or 2".into()),
         };
         Ok(self
             .client

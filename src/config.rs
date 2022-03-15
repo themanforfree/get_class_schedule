@@ -6,8 +6,8 @@ pub struct Config {
 
 impl Config {
     pub fn parse() -> Config {
-        let env_username = std::env::var("JWGLXT_USERNAME").unwrap_or(String::new());
-        let env_password = std::env::var("JWGLXT_PASSWORD").unwrap_or(String::new());
+        let env_username = std::env::var("JWGLXT_USERNAME").unwrap_or_default();
+        let env_password = std::env::var("JWGLXT_PASSWORD").unwrap_or_default();
         let matches = Command::new("jwglxt")
             .version("0.1")
             .author("themanforfree <themanforfree@gmail.com>")
