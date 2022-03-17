@@ -1,6 +1,6 @@
+use anyhow::Result;
 use chrono::{Duration, Local, TimeZone};
 use config::Config;
-use error_chain::error_chain;
 use jwglxt::Stu;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -8,14 +8,6 @@ use std::fs::File;
 
 mod config;
 mod jwglxt;
-
-error_chain!(
-    foreign_links {
-        SerdeJsonError(serde_json::Error);
-        IoError(std::io::Error);
-        CsvError(csv::Error);
-    }
-);
 
 #[derive(Deserialize, Serialize, Debug)]
 struct Class {
@@ -82,15 +74,28 @@ impl Class {
         let time = self
             .jcs
             .split('-')
-            .map(|v| v.parse::<u32>().unwrap())
+            .map(|v| {
+                v.parse::<u32>().unwrap_or_else(|e| {
+                    eprintln!("Parse error: {}", e);
+                    std::process::exit(1)
+                })
+            })
             .collect::<Vec<_>>();
         let weeks = self
             .zcd
-            .replace("周", "")
+            .replace('周', "")
             .split('-')
-            .map(|v| v.parse::<i64>().unwrap())
+            .map(|v| {
+                v.parse::<i64>().unwrap_or_else(|e| {
+                    eprintln!("Parse error: {}", e);
+                    std::process::exit(1)
+                })
+            })
             .collect::<Vec<_>>();
-        let day = self.xqj.parse::<i64>().unwrap();
+        let day = self.xqj.parse::<i64>().unwrap_or_else(|e| {
+            eprintln!("Parse error: {}", e);
+            std::process::exit(1)
+        });
         for week in weeks[0]..weeks[1] + 1 {
             let date = (start + Duration::weeks(week - 1) + Duration::days(day - 1))
                 .format("%m/%d/%Y")
@@ -121,7 +126,7 @@ fn get_csv(schedules: &str) -> Result<()> {
     let schedules: Value = serde_json::from_str(schedules)?;
     for record in schedules["kbList"]
         .as_array()
-        .unwrap()
+        .ok_or_else(|| anyhow::anyhow!("kbList is not an array"))?
         .iter()
         .map(|v| {
             serde_json::from_value(v.clone()).unwrap_or_else(|e| {
@@ -129,8 +134,7 @@ fn get_csv(schedules: &str) -> Result<()> {
                 Class::empty()
             })
         })
-        .map(|v| v.to_records())
-        .flatten()
+        .flat_map(|v| v.to_records())
     {
         writer.serialize(record)?;
     }
@@ -163,16 +167,15 @@ fn get_csv(schedules: &str) -> Result<()> {
     Ok(())
 }
 
-#[tokio::main]
-async fn main() {
+fn main() {
     let config = Config::parse();
     let stu = Stu::new(config);
-    if let Err(e) = stu.login().await {
+    if let Err(e) = stu.login() {
         println!("Login Error: {}", e);
         return;
     }
 
-    let schedules = match stu.get_schedules(2021, 2).await {
+    let schedules = match stu.get_schedules(2021, 2) {
         Ok(v) => v,
         Err(e) => {
             println!("Get Schedule Error: {}", e);
